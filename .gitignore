@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Configuration
+conf/env.conf
+conf/token-history.json
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# IDE - VSCode
+.vscode/
+*.code-workspace
+
+# IDE - WebStorm/IntelliJ
+.idea/
+*.iml
+
+# Misc
+.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Temp files
+*.swp
+*.swo
+*~
+
+# Debug
+.debug/
