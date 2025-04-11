@@ -1,0 +1,26 @@
+{
+  "name": "web-page-demo",
+  "version": "1.0.0",
+  "description": "A web application for generating authentication tokens for Zego services",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/start-server.js",
+    "start-old": "node start-servers.js",
+    "start-api": "node api-server.js",
+    "start-main": "node server/server.js",
+    "dev": "concurrently \"npm run start-api\" \"npm run start-main\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Zego",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^5.1.0",
+    "express-session": "^1.18.0",
+    "axios": "^1.6.7",
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

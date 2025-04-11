@@ -1,0 +1,332 @@
+body {
+    font-family: sans-serif;
+    padding: 20px;
+    position: relative;
+}
+
+.header-config {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+input[type="text"] {
+    width: 200px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+input[type="checkbox"] {
+    margin-right: 5px;
+}
+
+button {
+    padding: 10px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+.output {
+    margin-top: 20px;
+    padding: 10px;
+    border: 1px solid #eee;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+#result {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.error {
+    color: red;
+    font-size: 0.9em;
+    margin-top: 3px;
+}
+
+.copy-btn {
+    padding: 5px 10px;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+.copy-btn:hover {
+    background-color: #5a6268;
+}
+
+.copy-btn.success {
+    background-color: #28a745;
+}
+
+/* 模态窗口样式 */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    width: 400px;
+    max-width: 90%;
+}
+
+.modal h2 {
+    margin-top: 0;
+    color: #333;
+}
+
+.modal .form-group {
+    margin-bottom: 15px;
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.config-display {
+    font-size: 14px;
+    color: #666;
+    margin-right: 10px;
+}
+
+/* Token History Table Styles */
+.token-history {
+    margin-top: 30px;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.token-history h3 {
+    background-color: #f5f5f5;
+    padding: 10px 15px;
+    margin: 0;
+    border-bottom: 1px solid #eee;
+}
+
+.token-history-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    /* 固定表格布局，使列宽设置生效 */
+}
+
+.token-history-table th,
+.token-history-table td {
+    padding: 10px 15px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+    vertical-align: top;
+    /* 顶部对齐，使多行内容时更有组织性 */
+}
+
+/* 设置列宽 */
+.token-history-table th:first-child,
+.token-history-table td:first-child {
+    width: 75%;
+    /* Token列占据75%的宽度 */
+}
+
+.token-history-table th:last-child,
+.token-history-table td:last-child {
+    width: 25%;
+    /* 时间列占据25%的宽度 */
+}
+
+.token-history-table th {
+    background-color: #f9f9f9;
+    font-weight: bold;
+}
+
+.token-row {
+    cursor: pointer;
+    position: relative;
+}
+
+/* 添加展开/折叠指示器 */
+.token-row::after {
+    content: '\25BC';
+    /* 向下箭头 */
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.8em;
+    color: #999;
+    transition: transform 0.2s ease;
+}
+
+.token-row.expanded::after {
+    transform: translateY(-50%) rotate(180deg);
+    /* 旋转箭头 */
+}
+
+.token-row:hover {
+    background-color: #f5f5f5;
+}
+
+.token-details-row {
+    display: none;
+    /* 默认隐藏整个详情行 */
+}
+
+.token-details {
+    padding: 15px 20px;
+    background-color: #f9f9f9;
+    border-bottom: 1px solid #eee;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: monospace;
+    font-size: 0.85em;
+    /* 缩小字体以适应更多内容 */
+    max-height: 300px;
+    /* 最大高度限制 */
+    overflow-y: auto;
+    /* 内容过多时显示滚动条 */
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.1);
+    /* 添加内阴影增强视觉效果 */
+    border-radius: 0 0 4px 4px;
+    /* 底部圆角 */
+}
+
+.token-value {
+    position: relative;
+    /* 为内部元素定位提供参考 */
+    padding: 5px 0;
+    /* 增加上下内边距 */
+}
+
+.token-value>div {
+    font-family: monospace;
+    word-break: break-all;
+    /* 允许在任意字符间断行 */
+    white-space: pre-wrap;
+    /* 允许文本换行 */
+    line-height: 1.4;
+    /* 增加行高，提高可读性 */
+    padding-right: 50px;
+    /* 为复制按钮留出空间 */
+}
+
+/* 根据 token 长度自适应字体大小 */
+.token-value>div.token-length-small {
+    font-size: 0.85em;
+    /* 正常大小 */
+}
+
+.token-value>div.token-length-medium {
+    font-size: 0.75em;
+    /* 中等长度的token缩小字体 */
+}
+
+.token-value>div.token-length-large {
+    font-size: 0.65em;
+    /* 超长 token 使用更小的字体 */
+}
+
+.token-timestamp {
+    color: #666;
+    font-size: 0.9em;
+}
+
+/* 当行展开时显示详情行 */
+tr.expanded+.token-details-row {
+    display: table-row;
+}
+
+/* 详情区域的样式 */
+.token-params {
+    margin-bottom: 15px;
+    padding: 10px;
+    background-color: #f0f8ff;
+    border-radius: 4px;
+    border-left: 3px solid #007bff;
+}
+
+.token-params h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #007bff;
+}
+
+.token-params div {
+    margin: 5px 0;
+}
+
+.token-raw-data {
+    padding: 10px;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+}
+
+.token-raw-data h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #666;
+}
+
+.token-raw-data pre {
+    margin: 0;
+    white-space: pre-wrap;
+    font-size: 0.85em;
+}
+
+/* 复制按钮样式 */
+.copy-token-btn {
+    background-color: transparent;
+    border: none;
+    color: #007bff;
+    cursor: pointer;
+    padding: 2px 5px;
+    font-size: 0.8em;
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    z-index: 2;
+    /* 确保按钮始终在最上层 */
+}
+
+.copy-token-btn:hover {
+    color: #0056b3;
+    text-decoration: underline;
+}

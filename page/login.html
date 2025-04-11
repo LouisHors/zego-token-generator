@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zego Token Generate - Login</title>
+    <link rel="stylesheet" href="../style/login-styles.css">
+</head>
+
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>Zego Token Generate</h1>
+            <p>请登录以继续使用</p>
+        </div>
+
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">用户名:</label>
+                <input type="text" id="username" name="username" required>
+                <div class="error" id="usernameError"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">密码:</label>
+                <input type="password" id="password" name="password" required>
+                <div class="error" id="passwordError"></div>
+            </div>
+
+            <button type="submit" id="loginButton">登录</button>
+            <div class="error" id="loginError"></div>
+        </form>
+
+        <div class="login-footer">
+            © Zego 内部工具
+        </div>
+    </div>
+
+    <script>
+        // 元素引用
+        const loginForm = document.getElementById('loginForm');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+        const loginButton = document.getElementById('loginButton');
+        const usernameError = document.getElementById('usernameError');
+        const passwordError = document.getElementById('passwordError');
+        const loginError = document.getElementById('loginError');
+
+        // 表单提交处理
+        loginForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            // 清除之前的错误信息
+            usernameError.textContent = '';
+            passwordError.textContent = '';
+            loginError.textContent = '';
+
+            // 获取输入值
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value;
+
+            // 简单的客户端验证
+            let isValid = true;
+
+            if (!username) {
+                usernameError.textContent = '请输入用户名';
+                isValid = false;
+            }
+
+            if (!password) {
+                passwordError.textContent = '请输入密码';
+                isValid = false;
+            }
+
+            if (isValid) {
+                try {
+                    // 禁用登录按钮，防止重复提交
+                    loginButton.disabled = true;
+                    loginButton.textContent = '登录中...';
+
+                    // 发送登录请求
+                    const response = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            username,
+                            password
+                        }),
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok && result.success) {
+                        // 登录成功，重定向到主页
+                        window.location.href = '/';
+                    } else {
+                        // 显示错误信息
+                        loginError.textContent = result.message || '登录失败，请检查用户名和密码';
+                    }
+                } catch (error) {
+                    console.error('Login error:', error);
+                    loginError.textContent = '登录请求失败，请稍后再试';
+                } finally {
+                    // 重新启用登录按钮
+                    loginButton.disabled = false;
+                    loginButton.textContent = '登录';
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
