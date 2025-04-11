@@ -16,12 +16,6 @@ console.log('Token generator loaded');
 const { addTokenToHistory, getTokenHistoryByAppID, getAllTokenHistory } = require('./tokenHistory'); // 引入Token历史记录管理
 console.log('Token history manager loaded');
 
-const session = require('express-session'); // 用于会话管理
-console.log('Session loaded');
-
-const axios = require('axios'); // 用于HTTP请求
-console.log('Axios loaded');
-
 const app = express();
 const port = 3000; // 您可以选择其他端口
 
@@ -30,9 +24,6 @@ const port = 3000; // 您可以选择其他端口
 // appID 和 serverSecret 将从配置文件中读取
 const DEFAULT_EXPIRE_TIME = 120; // 默认 Token 有效期，单位秒
 const CONFIG_FILE_PATH = path.join(__dirname, '../conf/env.conf'); // 配置文件路径
-const OPT_OMS_LOGIN_URL = "https://opt-oms.zego.cloud/OmsApi/api/v2/user/login"; // LDAP登录接口
-const SESSION_SECRET = 'zego-token-generator-secret'; // 会话密钥
-const token_map = {}; // 用户令牌映射
 // --- 配置结束 ---
 
 // 加密和解密函数
@@ -88,42 +79,8 @@ app.use((req, res, next) => {
     next();
 });
 
-// 配置会话中间件
-app.use(session({
-    secret: SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        secure: false,
-        // 不设置 maxAge，使用默认的会话 cookie，关闭浏览器后失效
-    }
-}));
-
 // 提供静态文件服务 (托管 index.html)
 app.use(express.static(path.join(__dirname, '..'))); // 静态文件服务指向项目根目录
-
-// 身份验证中间件
-const authMiddleware = (req, res, next) => {
-    // 排除登录页面和登录API
-    if (req.path === '/page/login.html' || req.path === '/api/login') {
-        return next();
-    }
-
-    // 检查用户是否已登录
-    if (!req.session.authenticated) {
-        // 如果是API请求，返回401错误
-        if (req.path.startsWith('/api/') || req.path.startsWith('/generate-') || req.path.startsWith('/save-config') || req.path.startsWith('/get-config')) {
-            return res.status(401).json({ error: 'Unauthorized', message: '请先登录' });
-        }
-        // 如果是页面请求，重定向到登录页
-        return res.redirect('/page/login.html');
-    }
-
-    next();
-};
-
-// 应用身份验证中间件
-app.use(authMiddleware);
 
 // API 路由：保存配置
 app.post('/save-config', (req, res) => {
@@ -304,106 +261,6 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../index.html'));
 });
 
-// 登录页面路由
-app.get('/login', (req, res) => {
-    res.sendFile(path.join(__dirname, '../page/login.html'));
-});
-
-// LDAP登录API
-app.post('/api/login', async (req, res) => {
-    const { username, password } = req.body;
-
-    // 基本验证
-    if (!username || !password) {
-        return res.status(400).json({ success: false, message: '用户名和密码不能为空' });
-    }
-
-    try {
-        // 调用LDAP登录接口
-        const code = await opt_oms_login(username, password);
-
-        if (code === 0) {
-            // 登录成功，设置会话
-            req.session.authenticated = true;
-            req.session.username = username;
-            return res.json({ success: true, message: '登录成功' });
-        } else {
-            // 登录失败
-            return res.status(401).json({ success: false, message: '用户名或密码错误' });
-        }
-    } catch (error) {
-        console.error('Login error:', error);
-        return res.status(500).json({ success: false, message: '登录服务暂时不可用，请稍后再试' });
-    }
-});
-
-// 登出API
-app.post('/api/logout', (req, res) => {
-    req.session.destroy(err => {
-        if (err) {
-            return res.status(500).json({ success: false, message: '登出失败' });
-        }
-        // 清除所有相关的cookie
-        res.clearCookie('connect.sid'); // 清除会话 cookie
-        res.json({ success: true, message: '已成功登出' });
-    });
-});
-
-// 清除所有cookie API
-app.post('/api/clear-cookies', (req, res) => {
-    req.session.destroy(err => {
-        if (err) {
-            console.error('Error destroying session:', err);
-        }
-        // 清除所有相关的cookie
-        res.clearCookie('connect.sid'); // 清除会话 cookie
-        res.json({ success: true, message: '已清除所有cookie' });
-    });
-});
-
-// 检查登录状态 API
-app.get('/api/check-login-status', (req, res) => {
-    // 检查用户是否已登录
-    if (req.session.authenticated) {
-        // 已登录
-        res.json({ success: true, message: '用户已登录', username: req.session.username });
-    } else {
-        // 未登录
-        res.status(401).json({ success: false, message: '用户未登录' });
-    }
-});
-
-// LDAP登录函数
-async function opt_oms_login(account, pwd) {
-    let code = 0;
-    let token = "";
-    const request_json = { "username": account, "password": pwd };
-
-    try {
-        const response = await axios.post(OPT_OMS_LOGIN_URL, request_json, { validateStatus: false });
-        const response_json = response.data;
-
-        if (response_json.code === 10000) {
-            token = response_json.data;
-            token_map[account] = token;
-            const msg = response_json.message;
-            console.log(`User ${account} logged in successfully: ${msg}`);
-        } else {
-            if (account in token_map) {
-                delete token_map[account];
-            }
-            code = response_json.code;
-            const msg = response_json.message;
-            console.log(`Login failed for user ${account}: ${msg}`);
-        }
-    } catch (error) {
-        console.error(`opt_oms_login failed: ${error}`);
-        code = -1;
-    }
-
-    return code;
-}
-
 // API 路由：获取令牌历史记录
 app.get('/get-token-history', (req, res) => {
     // 从配置文件中读取 appID
@@ -436,10 +293,6 @@ try {
         console.log('- POST /save-config: Save configuration');
         console.log('- GET /get-config: Get configuration');
         console.log('- GET /get-token-history: Get token history');
-        console.log('- POST /api/login: Login with LDAP credentials');
-        console.log('- POST /api/logout: Logout and clear session');
-        console.log('- POST /api/clear-cookies: Clear all cookies and session');
-        console.log('- GET /api/check-login-status: Check if user is logged in');
     });
 
     server.on('error', (error) => {

@@ -13,7 +13,7 @@
     <div class="header-config">
         <div class="config-display">当前 App ID: <span id="currentAppID">未配置</span></div>
         <button id="configButton" class="copy-btn">修改配置</button>
-        <button id="logoutButton" class="copy-btn" style="background-color: #dc3545;">登出</button>
+
     </div>
 
     <!-- 配置模态窗口 -->
@@ -103,39 +103,7 @@
     </div>
 
     <script>
-        // 首先检查用户是否已登录
-        (async function checkLoginStatus() {
-            try {
-                // 发送请求检查登录状态
-                const response = await fetch('/api/check-login-status');
 
-                if (response.status === 401) {
-                    // 未登录，立即跳转到登录页面
-                    console.log('User not logged in, redirecting to login page');
-                    window.location.href = '/page/login.html';
-                    return;
-                }
-            } catch (error) {
-                console.error('Error checking login status:', error);
-                // 出错时也跳转到登录页面
-                window.location.href = '/page/login.html';
-                return;
-            }
-        })();
-
-        // 页面关闭或刷新时自动登出
-        window.addEventListener('beforeunload', function (e) {
-            // 使用同步的 XMLHttpRequest 发送登出请求
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', '/api/logout', false); // false 表示同步请求
-            xhr.setRequestHeader('Content-Type', 'application/json');
-            try {
-                xhr.send();
-                console.log('User logged out successfully');
-            } catch (error) {
-                console.error('Error during logout:', error);
-            }
-        });
 
         // 元素引用
         const userIdInput = document.getElementById('userId');
@@ -162,7 +130,7 @@
         const currentAppIDSpan = document.getElementById('currentAppID');
         const configAppIDError = document.getElementById('configAppIDError');
         const configServerSecretError = document.getElementById('configServerSecretError');
-        const logoutButton = document.getElementById('logoutButton');
+
 
         // 当前配置
         let currentAppID = '';
@@ -497,60 +465,8 @@
             displayTokenHistory(tokenHistory);
         }
 
-        // 清除所有cookie的函数
-        async function clearAllCookies() {
-            try {
-                const response = await fetch('/api/clear-cookies', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                const result = await response.json();
-
-                if (response.ok && result.success) {
-                    console.log('All cookies cleared successfully');
-                    return true;
-                } else {
-                    console.error('Failed to clear cookies:', result.message || 'Unknown error');
-                    return false;
-                }
-            } catch (error) {
-                console.error('Error clearing cookies:', error);
-                return false;
-            }
-        }
-
-        // 登出按钮点击事件
-        logoutButton.addEventListener('click', async () => {
-            try {
-                const response = await fetch('/api/logout', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                const result = await response.json();
-
-                if (response.ok && result.success) {
-                    // 登出成功，重定向到登录页面
-                    window.location.href = '/page/login.html';
-                } else {
-                    alert('登出失败: ' + (result.message || '未知错误'));
-                }
-            } catch (error) {
-                console.error('Logout error:', error);
-                alert('登出请求失败，请重试');
-            }
-        });
-
-        // 页面加载时清除cookie并获取配置
+        // 页面加载时获取配置
         (async function () {
-            // 首先清除所有cookie，确保用户需要重新登录
-            // 注释下面这行代码可以允许用户保持登录状态
-            // await clearAllCookies();
 
             try {
                 const configExists = await fetchConfig();

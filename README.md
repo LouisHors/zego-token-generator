@@ -7,7 +7,7 @@ A web application for generating authentication tokens for Zego services. This t
 - Generate tokens with customizable parameters
 - Create basic tokens with empty payload
 - Configure App ID and Server Secret securely
-- LDAP authentication for secure access
+
 - Token history tracking and management
 - Copy tokens to clipboard with one click
 - Responsive design for various screen sizes
@@ -20,7 +20,6 @@ A web application for generating authentication tokens for Zego services. This t
 │   ├── env.conf           # Environment configuration (App ID and Server Secret)
 │   └── token-history.json # Token history storage
 ├── page/                  # HTML pages
-│   └── login.html         # Login page
 ├── server/                # Server-side code
 │   ├── server.js          # Main server implementation
 │   ├── start-server.js    # Server startup script
@@ -28,8 +27,7 @@ A web application for generating authentication tokens for Zego services. This t
 │   ├── zegoServerAssistant.js  # Token generation utilities
 │   └── zegoServerAssistant.ts  # TypeScript version of token utilities
 ├── style/                 # CSS stylesheets
-│   ├── styles.css         # Main application styles
-│   └── login-styles.css   # Login page styles
+│   └── styles.css         # Main application styles
 ├── index.html             # Main application page
 ├── package.json           # Project dependencies and scripts
 ├── package-lock.json      # Dependency lock file
@@ -69,11 +67,11 @@ A web application for generating authentication tokens for Zego services. This t
    http://localhost:3000
    ```
 
-3. Log in with your LDAP credentials
 
-4. Configure your App ID and Server Secret if not already set
 
-5. Generate tokens by filling in the required fields and clicking "Generate" or "Generate Basic Token"
+3. Configure your App ID and Server Secret if not already set
+
+4. Generate tokens by filling in the required fields and clicking "Generate" or "Generate Basic Token"
 
 ## API Endpoints
 
@@ -82,16 +80,11 @@ A web application for generating authentication tokens for Zego services. This t
 - `POST /save-config`: Save configuration
 - `GET /get-config`: Get configuration
 - `GET /get-token-history`: Get token history
-- `POST /api/login`: Login with LDAP credentials
-- `POST /api/logout`: Logout and clear session
-- `POST /api/clear-cookies`: Clear all cookies and session
-- `GET /api/check-login-status`: Check if user is logged in
+
 
 ## Security Features
 
-- LDAP authentication for secure access
 - Secure storage of App ID and Server Secret
-- Session management with automatic logout
 - No hardcoded credentials
 - Base64 encoding of sensitive information
 

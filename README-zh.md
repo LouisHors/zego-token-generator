@@ -7,7 +7,6 @@
 - 生成带权限验证的token
 - 生成基础token
 - 安全配置 App ID 和 Server Secret
-- LDAP 认证以确保安全访问
 - token历史记录跟踪和管理
 - 一键复制token到剪贴板
 - 响应式设计，适配各种屏幕尺寸
@@ -20,7 +19,6 @@
 │   ├── env.conf           # 环境配置（App ID 和 Server Secret）
 │   └── token-history.json # token历史记录存储
 ├── page/                  # HTML 页面
-│   └── login.html         # 登录页面
 ├── server/                # 服务器端代码
 │   ├── server.js          # 主服务器实现
 │   ├── start-server.js    # 服务器启动脚本
@@ -28,8 +26,7 @@
 │   ├── zegoServerAssistant.js  # token生成工具
 │   └── zegoServerAssistant.ts  # token工具的 TypeScript 版本
 ├── style/                 # CSS 样式表
-│   ├── styles.css         # 主应用程序样式
-│   └── login-styles.css   # 登录页面样式
+│   └── styles.css         # 主应用程序样式
 ├── index.html             # 主应用程序页面
 ├── package.json           # 项目依赖和脚本
 ├── package-lock.json      # 依赖锁定文件
@@ -69,11 +66,9 @@
    http://localhost:3000
    ```
 
-3. 使用您的 LDAP 凭据登录
+3. 如果尚未设置，请配置您的 App ID 和 Server Secret
 
-4. 如果尚未设置，请配置您的 App ID 和 Server Secret
-
-5. 通过填写必要的字段并点击"生成"或"生成基础token"来生成token
+4. 通过填写必要的字段并点击"生成"或"生成基础token"来生成token
 
 ## API 端点
 
@@ -82,16 +77,10 @@
 - `POST /save-config`：保存配置
 - `GET /get-config`：获取配置
 - `GET /get-token-history`：获取token历史记录
-- `POST /api/login`：使用 LDAP 凭据登录
-- `POST /api/logout`：登出并清除会话
-- `POST /api/clear-cookies`：清除所有 cookie
-- `GET /api/check-login-status`：检查用户是否已登录
 
 ## 安全特性
 
-- LDAP 认证以确保安全访问
 - App ID 和 Server Secret 的安全存储
-- 会话管理，自动登出
 - 无硬编码凭据
 - 敏感信息的 Base64 编码
 
