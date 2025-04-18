@@ -8,27 +8,10 @@
     ],
     "routes": [
         {
-            "src": "/api/(.*)",
-            "dest": "server/server.js"
+            "handle": "filesystem"
         },
         {
-            "src": "/generate-token",
-            "dest": "server/server.js"
-        },
-        {
-            "src": "/generate-basic-token",
-            "dest": "server/server.js"
-        },
-        {
-            "src": "/save-config",
-            "dest": "server/server.js"
-        },
-        {
-            "src": "/get-config",
-            "dest": "server/server.js"
-        },
-        {
-            "src": "/get-token-history",
+            "src": "/(.*)",
             "dest": "server/server.js"
         }
     ]
