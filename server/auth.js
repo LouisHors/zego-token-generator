@@ -61,8 +61,8 @@ const authMiddleware = (req, res, next) => {
             return res.status(401).json({ error: 'Unauthorized', message: '请先登录' });
         }
         // 如果是页面请求，重定向到登录页
-        console.log(`[auth.js] Redirecting to /page/login.html`);
-        return res.redirect('/page/login.html');
+        console.log(`[auth.js] Redirecting to /login.html`);
+        return res.redirect('/login.html');
     }
     console.log(`[auth.js] Authentication successful for ${req.method} ${req.url}. User: ${req.session.username}`);
     next();
@@ -73,11 +73,12 @@ const authMiddleware = (req, res, next) => {
 const router = express.Router();
 console.log('[auth.js] Creating auth router...');
 
-// 登录页面路由
+// 登录页面路由 - This route might become redundant if Vercel serves public/login.html directly.
+// Keeping it for now, but it might not be hit if static serving takes precedence.
 router.get('/login', (req, res) => {
-    console.log('[auth.js] GET /login route hit');
-    // 使用相对路径 '../page/login.html' 指向根目录下的 page 文件夹
-    res.sendFile(path.join(__dirname, '../page/login.html'));
+    console.log('[auth.js] GET /login route hit - Attempting to send file');
+    // Send the file from the public directory
+    res.sendFile(path.join(__dirname, '../public/login.html'));
 });
 
 

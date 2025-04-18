@@ -163,9 +163,9 @@ if (redisClient) { // Only configure session if Redis client initialized success
 }
 
 // 提供静态文件服务 (托管 index.html 等)
-console.log('Configuring express.static middleware...');
-app.use(express.static(path.join(__dirname, '..'))); // 静态文件服务指向项目根目录
-console.log('express.static middleware configured.');
+// console.log('Configuring express.static middleware...'); // Removed
+// app.use(express.static(path.join(__dirname, '..'))); // Removed - Vercel serves 'public' directory
+// console.log('express.static middleware configured.'); // Removed
 
 // --- 认证路由和中间件 ---
 console.log('Mounting authentication router...');
@@ -354,15 +354,16 @@ app.post('/generate-basic-token', (req, res) => {
 
 // 根路由，提供 index.html (现在受 authMiddleware 保护，如果未登录会重定向)
 app.get('/', (req, res) => {
-    // 检查配置是否存在，如果不存在，可能重定向到配置页面或显示提示
+    console.log('[server.js] GET / route hit'); // Added log
     const config = readConfig();
     if (!config) {
         // 暂时先允许访问，前端应该有逻辑处理配置缺失
         console.log('Root access allowed, but config is missing.');
         // 或者可以重定向到某个设置页面
-        // return res.redirect('/page/config.html');
+        // return res.redirect('/page/config.html'); // Path would need update if config page exists
     }
-    res.sendFile(path.join(__dirname, '../index.html'));
+    // Send index.html from the public directory
+    res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 // 登录页面路由 - 已移至 auth.js
