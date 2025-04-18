@@ -73,13 +73,8 @@ const authMiddleware = (req, res, next) => {
 const router = express.Router();
 console.log('[auth.js] Creating auth router...');
 
-// 登录页面路由 - This route might become redundant if Vercel serves public/login.html directly.
-// Keeping it for now, but it might not be hit if static serving takes precedence.
-router.get('/login', (req, res) => {
-    console.log('[auth.js] GET /login route hit - Attempting to send file');
-    // Send the file from the public directory
-    res.sendFile(path.join(__dirname, '../public/login.html'));
-});
+// Removed router.get('/login') handler - Vercel will serve public/login.html
+// router.get('/login', (req, res) => { ... });
 
 
 // LDAP登录API

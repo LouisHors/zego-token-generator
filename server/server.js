@@ -352,40 +352,6 @@ app.post('/generate-basic-token', (req, res) => {
     }
 });
 
-// 根路由，提供 index.html (现在受 authMiddleware 保护，如果未登录会重定向)
-app.get('/', (req, res) => {
-    console.log('[server.js] GET / route hit'); // Added log
-    const config = readConfig();
-    if (!config) {
-        // 暂时先允许访问，前端应该有逻辑处理配置缺失
-        console.log('Root access allowed, but config is missing.');
-        // 或者可以重定向到某个设置页面
-        // return res.redirect('/page/config.html'); // Path would need update if config page exists
-    }
-    // Send index.html from the public directory
-    res.sendFile(path.join(__dirname, '../public/index.html'));
-});
-
-// 登录页面路由 - 已移至 auth.js
-// app.get('/login', (req, res) => {
-//     res.sendFile(path.join(__dirname, '../page/login.html'));
-// });
-
-// LDAP登录API - 已移至 auth.js
-// app.post('/api/login', async (req, res) => { ... });
-
-// 登出API - 已移至 auth.js
-// app.post('/api/logout', (req, res) => { ... });
-
-// 清除所有cookie API - 已移至 auth.js
-// app.post('/api/clear-cookies', (req, res) => { ... });
-
-// 检查登录状态 API - 已移至 auth.js
-// app.get('/api/check-login-status', (req, res) => { ... });
-
-// LDAP登录函数 - 已移至 auth.js
-// async function opt_oms_login(account, pwd) { ... }
-
 // API 路由：获取令牌历史记录
 app.get('/get-token-history', (req, res) => {
     // 从配置文件中读取 appID
