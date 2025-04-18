@@ -162,10 +162,10 @@ if (redisClient) { // Only configure session if Redis client initialized success
     console.log('express-session middleware configured using MemoryStore (Fallback).');
 }
 
-// 提供静态文件服务 (托管 index.html 等)
-// console.log('Configuring express.static middleware...'); // Removed
-// app.use(express.static(path.join(__dirname, '..'))); // Removed - Vercel serves 'public' directory
-// console.log('express.static middleware configured.'); // Removed
+// 提供静态文件服务 (托管 public 目录下的文件，用于本地开发)
+console.log('Configuring express.static middleware for local development...');
+app.use(express.static(path.join(__dirname, '../public')));
+console.log('express.static middleware configured.');
 
 // --- 认证路由和中间件 ---
 console.log('Mounting authentication router...');
@@ -366,6 +366,17 @@ app.get('/get-token-history', (req, res) => {
     const tokenHistory = getTokenHistoryByAppID(appID);
 
     res.json({ success: true, appID, tokenHistory });
+});
+
+// Add back app.get('/') handler for local development
+// Vercel's routing/filesystem handling will likely take precedence in production
+app.get('/', (req, res) => {
+    console.log('[server.js] GET / route hit (local handler)');
+    // Note: Auth middleware runs before this handler on Vercel due to routes
+    // Locally, auth middleware also runs first.
+    // If authenticated, it should serve index.html.
+    // If not, authMiddleware should redirect before this handler is reached.
+    res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 // 添加错误处理中间件 - 必须放在最后

@@ -73,9 +73,13 @@ const authMiddleware = (req, res, next) => {
 const router = express.Router();
 console.log('[auth.js] Creating auth router...');
 
-// Removed router.get('/login') handler - Vercel will serve public/login.html
-// router.get('/login', (req, res) => { ... });
-
+// Add back router.get('/login') handler for local development
+// Vercel should serve public/login.html directly due to filesystem handling
+router.get('/login', (req, res) => {
+    console.log('[auth.js] GET /login route hit (local handler)');
+    // This should only be hit locally if authMiddleware allows it (which it should)
+    res.sendFile(path.join(__dirname, '../public/login.html'));
+});
 
 // LDAP登录API
 router.post('/api/login', async (req, res) => {
