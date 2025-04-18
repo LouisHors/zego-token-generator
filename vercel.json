@@ -8,12 +8,10 @@
     ],
     "routes": [
         {
-            "src": "/style/(.*)",
-            "dest": "/style/$1"
+            "src": "/style/(.*)"
         },
         {
-            "src": "/page/(.*)",
-            "dest": "/page/$1"
+            "src": "/page/(.*)"
         },
         {
             "src": "/(.*)",
