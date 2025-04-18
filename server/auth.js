@@ -1,4 +1,6 @@
 // server/auth.js
+console.log('Loading server/auth.js...');
+
 const express = require('express');
 const path = require('path');
 const axios = require('axios');
@@ -11,6 +13,7 @@ const token_map = {}; // 用户令牌映射 (虽然定义了，但目前在 opt_
 async function opt_oms_login(account, pwd) {
     let code = 0;
     const request_json = { "username": account, "password": pwd };
+    console.log(`[auth.js] opt_oms_login called for user: ${account}`);
 
     try {
         console.log(`Attempting LDAP login for user: ${account}`);
@@ -34,39 +37,45 @@ async function opt_oms_login(account, pwd) {
         code = -1; // 表示内部错误
     }
 
+    console.log(`[auth.js] opt_oms_login finished for user: ${account}, returning code: ${code}`);
     return code;
 }
 
 
 // --- 身份验证中间件 ---
 const authMiddleware = (req, res, next) => {
+    console.log(`[auth.js] authMiddleware executing for: ${req.method} ${req.originalUrl}`);
+
     // 排除登录页面和登录API
     const publicPaths = ['/page/login.html', '/api/login', '/login']; // 将 /login 加入公共路径
     if (publicPaths.includes(req.path)) {
+        console.log(`[auth.js] Path ${req.path} is public, skipping auth check.`);
         return next();
     }
 
     // 检查用户是否已登录
     if (!req.session || !req.session.authenticated) {
-        console.log(`Authentication failed for ${req.method} ${req.url}. Session authenticated: ${req.session ? req.session.authenticated : 'no session'}`);
+        console.log(`[auth.js] Authentication failed for ${req.method} ${req.url}. Session authenticated: ${req.session ? req.session.authenticated : 'no session'}`);
         // 如果是API请求，返回401错误
         if (req.path.startsWith('/api/') || req.path.startsWith('/generate-') || req.path.startsWith('/save-config') || req.path.startsWith('/get-config')) {
             return res.status(401).json({ error: 'Unauthorized', message: '请先登录' });
         }
         // 如果是页面请求，重定向到登录页
-        // 注意：确保重定向路径是客户端可以访问的绝对路径或相对根路径
+        console.log(`[auth.js] Redirecting to /page/login.html`);
         return res.redirect('/page/login.html');
     }
-    console.log(`Authentication successful for ${req.method} ${req.url}. User: ${req.session.username}`);
+    console.log(`[auth.js] Authentication successful for ${req.method} ${req.url}. User: ${req.session.username}`);
     next();
 };
 
 
 // --- 认证路由 ---
 const router = express.Router();
+console.log('[auth.js] Creating auth router...');
 
 // 登录页面路由
 router.get('/login', (req, res) => {
+    console.log('[auth.js] GET /login route hit');
     // 使用相对路径 '../page/login.html' 指向根目录下的 page 文件夹
     res.sendFile(path.join(__dirname, '../page/login.html'));
 });
@@ -74,6 +83,7 @@ router.get('/login', (req, res) => {
 
 // LDAP登录API
 router.post('/api/login', async (req, res) => {
+    console.log('[auth.js] POST /api/login route hit');
     const { username, password } = req.body;
 
     // 基本验证
@@ -89,7 +99,7 @@ router.post('/api/login', async (req, res) => {
             // 登录成功，设置会话
             req.session.authenticated = true;
             req.session.username = username;
-            console.log(`Session set for user: ${username}, authenticated: ${req.session.authenticated}`);
+            console.log(`[auth.js] Session set for user: ${username}, authenticated: ${req.session.authenticated}`);
             // 确保会话被保存
             req.session.save(err => {
                 if (err) {
@@ -111,6 +121,7 @@ router.post('/api/login', async (req, res) => {
 
 // 登出API
 router.post('/api/logout', (req, res) => {
+    console.log('[auth.js] POST /api/logout route hit');
     const username = req.session ? req.session.username : 'unknown user';
     req.session.destroy(err => {
         if (err) {
@@ -126,6 +137,7 @@ router.post('/api/logout', (req, res) => {
 
 // 清除所有cookie API (主要是为了开发/调试，正常登出已包含清除)
 router.post('/api/clear-cookies', (req, res) => {
+    console.log('[auth.js] POST /api/clear-cookies route hit');
     const username = req.session ? req.session.username : 'unknown user';
     req.session.destroy(err => {
         if (err) {
@@ -141,6 +153,7 @@ router.post('/api/clear-cookies', (req, res) => {
 
 // 检查登录状态 API
 router.get('/api/check-login-status', (req, res) => {
+    console.log('[auth.js] GET /api/check-login-status route hit');
     // 检查用户是否已登录
     if (req.session && req.session.authenticated) {
         // 已登录
@@ -155,6 +168,7 @@ router.get('/api/check-login-status', (req, res) => {
 
 
 // --- 导出 ---
+console.log('[auth.js] Exporting authMiddleware and router...');
 module.exports = {
     authMiddleware,
     router // 导出路由对象

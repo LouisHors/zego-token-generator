@@ -1,5 +1,5 @@
 // server.js
-console.log('Starting server...');
+console.log('Starting server/server.js...');
 
 const express = require('express');
 console.log('Express loaded');
@@ -19,12 +19,33 @@ console.log('Token history manager loaded');
 const session = require('express-session'); // 用于会话管理
 console.log('Session loaded');
 
+// --- Upstash Redis / Session Store Integration --- Start ---
+const { Redis } = require('@upstash/redis');
+const RedisStore = require("connect-redis").default; // Use .default for ES Modules compatibility if needed
+console.log('Upstash Redis and connect-redis loaded');
+
+// Initialize Upstash Redis client from environment variables
+// Vercel automatically sets UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN when connected
+let redisClient;
+try {
+    redisClient = Redis.fromEnv();
+    console.log('Upstash Redis client initialized using Redis.fromEnv()');
+} catch (error) {
+    console.error('ERROR: Failed to initialize Upstash Redis client from environment variables.');
+    console.error('Ensure UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are set correctly in Vercel.');
+    console.error(error);
+    // Depending on requirements, might want to exit or use fallback
+    // process.exit(1);
+}
+// --- Upstash Redis / Session Store Integration --- End ---
+
 // 引入认证模块
 const { authMiddleware, router: authRouter } = require('./auth');
 console.log('Auth module loaded');
 
 const app = express();
-const port = 3000; // 您可以选择其他端口
+const port = process.env.PORT || 3000; // Use PORT from env if available
+console.log(`Express app created. Attempting to listen on port: ${port}`);
 
 // --- 默认配置 ---
 // 不再硬编码 appID 和 serverSecret
@@ -32,10 +53,15 @@ const port = 3000; // 您可以选择其他端口
 const DEFAULT_EXPIRE_TIME = 120; // 默认 Token 有效期，单位秒
 const CONFIG_FILE_PATH = path.join(__dirname, '../conf/env.conf'); // 配置文件路径
 // OPT_OMS_LOGIN_URL 和 token_map 已移至 auth.js
-// const OPT_OMS_LOGIN_URL = "https://opt-oms.zego.cloud/OmsApi/api/v2/user/login"; // LDAP登录接口
-const SESSION_SECRET = 'zego-token-generator-secret'; // 会话密钥 (auth.js 也需要这个，但 session 配置在这里完成)
-// const token_map = {}; // 用户令牌映射
+const SESSION_SECRET = process.env.SESSION_SECRET || 'zego-token-generator-secret-fallback'; // 从环境变量读取，提供回退
+if (SESSION_SECRET === 'zego-token-generator-secret-fallback') {
+    console.warn('WARNING: Using fallback SESSION_SECRET. Set SESSION_SECRET environment variable in production!');
+}
 // --- 配置结束 ---
+
+// --- Vercel KV Session Store --- Start ---
+// Removed - Replaced by Upstash Redis Integration above
+// --- Vercel KV Session Store --- End ---
 
 // 加密和解密函数
 function encodeConfig(appID, serverSecret) {
@@ -91,42 +117,66 @@ function writeConfig(appID, serverSecret) {
 
 // 中间件，用于解析 JSON 请求体
 app.use(express.json());
+console.log('express.json middleware added.');
 
 // 添加请求日志中间件
 app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    console.log(`${new Date().toISOString()} - Incoming Request: ${req.method} ${req.originalUrl}`);
     next();
 });
 
 // 配置会话中间件 - 必须在 authMiddleware 和 authRouter 之前
-app.use(session({
-    secret: SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        secure: process.env.NODE_ENV === 'production', // 在生产环境中应使用 secure cookie
-        httpOnly: true, // 防止客户端脚本访问 cookie
-        // 不设置 maxAge，使用默认的会话 cookie，关闭浏览器后失效
-    }
-}));
+console.log('Configuring express-session middleware...');
+if (redisClient) { // Only configure session if Redis client initialized successfully
+    app.use(session({
+        store: new RedisStore({
+            client: redisClient,
+            prefix: "sess:" // Optional: prefix for session keys in Redis
+        }),
+        secret: SESSION_SECRET, // Read from env or fallback
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+            secure: process.env.NODE_ENV === 'production', // 在生产环境中应使用 secure cookie
+            httpOnly: true, // 防止客户端脚本访问 cookie
+            // 不设置 maxAge，使用默认的会话 cookie，关闭浏览器后失效
+            // maxAge: 1000 * 60 * 60 * 24 // Example: 1 day session lifetime
+        }
+    }));
+    console.log('express-session middleware configured using RedisStore.');
+} else {
+    console.error('ERROR: Redis client not available, express-session middleware NOT configured.');
+    // Handle this case - maybe prevent server start or use MemoryStore as fallback with warning
+    console.warn('WARNING: Falling back to MemoryStore for session due to Redis client init failure. Sessions will not persist across restarts/deployments!');
+    app.use(session({
+        secret: SESSION_SECRET,
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+            secure: process.env.NODE_ENV === 'production',
+            httpOnly: true,
+        }
+    }));
+    console.log('express-session middleware configured using MemoryStore (Fallback).');
+}
 
 // 提供静态文件服务 (托管 index.html 等)
-// 确保静态文件服务在 session 和 auth 中间件之后，但在需要认证的路由之前
-// 这样 /page/login.html 可以被访问，而其他静态资源（如果需要）可能需要登录
+console.log('Configuring express.static middleware...');
 app.use(express.static(path.join(__dirname, '..'))); // 静态文件服务指向项目根目录
-
+console.log('express.static middleware configured.');
 
 // --- 认证路由和中间件 ---
-// 挂载认证相关的路由 (例如 /login, /api/login, /api/logout 等)
+console.log('Mounting authentication router...');
 app.use(authRouter); // 使用从 auth.js 导入的路由
+console.log('Authentication router mounted.');
 
-// 应用身份验证中间件 (保护后续的路由)
-// 这个中间件现在从 auth.js 导入
+console.log('Applying authentication middleware...');
 app.use(authMiddleware);
+console.log('Authentication middleware applied.');
 // --- 认证结束 ---
 
-
 // --- 受保护的 API 路由 ---
+console.log('Defining protected API routes...');
 
 // API 路由：保存配置
 app.post('/save-config', (req, res) => {
@@ -199,8 +249,6 @@ app.post('/generate-token', (req, res) => {
 
     console.log('Token generation - expireTime input:', expireTime);
     console.log('Token generation - using expireTime:', tokenExpireTime);
-
-
 
     // 构建 payload
     const payloadObject = {
@@ -352,35 +400,47 @@ app.get('/get-token-history', (req, res) => {
 });
 
 // 添加错误处理中间件 - 必须放在最后
+console.log('Adding final error handler middleware...');
 app.use((err, req, res, next) => {
     console.error('Error:', err);
     res.status(500).json({ error: 'Internal Server Error' });
 });
 
 // 启动服务器
+console.log('Attempting to start server...');
 try {
-    const server = app.listen(port, () => {
-        console.log(`Server listening at http://localhost:${port}`);
-        console.log('Available endpoints (some require login):');
-        console.log('- GET /login: Login page');
-        console.log('- POST /api/login: Login with LDAP credentials');
-        console.log('- POST /api/logout: Logout and clear session');
-        console.log('- GET /api/check-login-status: Check if user is logged in');
-        console.log('--- Protected Endpoints ---');
-        console.log('- GET /: Main application page');
-        console.log('- POST /generate-token: Generate token with payload');
-        console.log('- POST /generate-basic-token: Generate basic token with empty payload');
-        console.log('- POST /save-config: Save configuration');
-        console.log('- GET /get-config: Get configuration');
-        console.log('- GET /get-token-history: Get token history');
-        // console.log('- POST /api/clear-cookies: Clear all cookies and session (for debugging)');
-    });
+    // Vercel 会处理监听，本地运行时需要 app.listen
+    if (process.env.VERCEL) {
+        console.log('Running on Vercel, skipping app.listen()');
+    } else {
+        console.log(`Attempting app.listen on port ${port}`);
+        const server = app.listen(port, () => {
+            console.log(`Server listening locally at http://localhost:${port}`);
+            console.log('Available endpoints (some require login):');
+            console.log('- GET /login: Login page');
+            console.log('- POST /api/login: Login with LDAP credentials');
+            console.log('- POST /api/logout: Logout and clear session');
+            console.log('- GET /api/check-login-status: Check if user is logged in');
+            console.log('--- Protected Endpoints ---');
+            console.log('- GET /: Main application page');
+            console.log('- POST /generate-token: Generate token with payload');
+            console.log('- POST /generate-basic-token: Generate basic token with empty payload');
+            console.log('- POST /save-config: Save configuration');
+            console.log('- GET /get-config: Get configuration');
+            console.log('- GET /get-token-history: Get token history');
+            // console.log('- POST /api/clear-cookies: Clear all cookies and session (for debugging)');
+        });
 
-    server.on('error', (error) => {
-        console.error('Server error:', error);
-        process.exit(1);
-    });
+        server.on('error', (error) => {
+            console.error('Server error:', error);
+            process.exit(1);
+        });
+    }
 } catch (error) {
     console.error('Error starting server:', error);
     process.exit(1);
 }
+
+// Export the app for Vercel
+module.exports = app;
+console.log('Server setup complete. Exporting app.');
