@@ -21,8 +21,9 @@ console.log('Session loaded');
 
 // --- Upstash Redis / Session Store Integration --- Start ---
 const { Redis } = require('@upstash/redis');
-const RedisStore = require("connect-redis"); // Standard CommonJS import
-console.log('Upstash Redis and connect-redis loaded');
+const connectRedis = require("connect-redis"); // Require the main function
+const RedisStore = connectRedis(session); // Pass session to get the store constructor
+console.log('Upstash Redis and connect-redis loaded, RedisStore constructor obtained.'); // Updated log
 
 // Initialize Upstash Redis client from environment variables
 // Vercel automatically sets UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN when connected
