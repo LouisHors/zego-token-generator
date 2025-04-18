@@ -47,7 +47,7 @@ const authMiddleware = (req, res, next) => {
     console.log(`[auth.js] authMiddleware executing for: ${req.method} ${req.originalUrl}`);
 
     // 排除登录页面和登录API
-    const publicPaths = ['/page/login.html', '/api/login', '/login']; // 将 /login 加入公共路径
+    const publicPaths = ['/login.html', '/api/login', '/login'];
     if (publicPaths.includes(req.path)) {
         console.log(`[auth.js] Path ${req.path} is public, skipping auth check.`);
         return next();
