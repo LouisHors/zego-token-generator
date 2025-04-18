@@ -19,8 +19,9 @@ console.log('Token history manager loaded');
 const session = require('express-session'); // 用于会话管理
 console.log('Session loaded');
 
-const axios = require('axios'); // 用于HTTP请求
-console.log('Axios loaded');
+// 引入认证模块
+const { authMiddleware, router: authRouter } = require('./auth');
+console.log('Auth module loaded');
 
 const app = express();
 const port = 3000; // 您可以选择其他端口
@@ -30,9 +31,10 @@ const port = 3000; // 您可以选择其他端口
 // appID 和 serverSecret 将从配置文件中读取
 const DEFAULT_EXPIRE_TIME = 120; // 默认 Token 有效期，单位秒
 const CONFIG_FILE_PATH = path.join(__dirname, '../conf/env.conf'); // 配置文件路径
-const OPT_OMS_LOGIN_URL = "https://opt-oms.zego.cloud/OmsApi/api/v2/user/login"; // LDAP登录接口
-const SESSION_SECRET = 'zego-token-generator-secret'; // 会话密钥
-const token_map = {}; // 用户令牌映射
+// OPT_OMS_LOGIN_URL 和 token_map 已移至 auth.js
+// const OPT_OMS_LOGIN_URL = "https://opt-oms.zego.cloud/OmsApi/api/v2/user/login"; // LDAP登录接口
+const SESSION_SECRET = 'zego-token-generator-secret'; // 会话密钥 (auth.js 也需要这个，但 session 配置在这里完成)
+// const token_map = {}; // 用户令牌映射
 // --- 配置结束 ---
 
 // 加密和解密函数
@@ -57,6 +59,8 @@ function readConfig() {
         if (fs.existsSync(CONFIG_FILE_PATH)) {
             const encodedConfig = fs.readFileSync(CONFIG_FILE_PATH, 'utf8');
             return decodeConfig(encodedConfig);
+        } else {
+            console.warn(`Config file not found at ${CONFIG_FILE_PATH}`);
         }
     } catch (error) {
         console.error('Error reading config file:', error);
@@ -70,6 +74,12 @@ function writeConfig(appID, serverSecret) {
         console.log(`Writing config to ${CONFIG_FILE_PATH}...`);
         const encodedConfig = encodeConfig(appID, serverSecret);
         console.log('Config encoded successfully');
+        // 确保目录存在
+        const confDir = path.dirname(CONFIG_FILE_PATH);
+        if (!fs.existsSync(confDir)) {
+            fs.mkdirSync(confDir, { recursive: true });
+            console.log(`Created directory: ${confDir}`);
+        }
         fs.writeFileSync(CONFIG_FILE_PATH, encodedConfig, 'utf8');
         console.log('Config file written successfully');
         return true;
@@ -88,42 +98,35 @@ app.use((req, res, next) => {
     next();
 });
 
-// 配置会话中间件
+// 配置会话中间件 - 必须在 authMiddleware 和 authRouter 之前
 app.use(session({
     secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: false,
+        secure: process.env.NODE_ENV === 'production', // 在生产环境中应使用 secure cookie
+        httpOnly: true, // 防止客户端脚本访问 cookie
         // 不设置 maxAge，使用默认的会话 cookie，关闭浏览器后失效
     }
 }));
 
-// 提供静态文件服务 (托管 index.html)
+// 提供静态文件服务 (托管 index.html 等)
+// 确保静态文件服务在 session 和 auth 中间件之后，但在需要认证的路由之前
+// 这样 /page/login.html 可以被访问，而其他静态资源（如果需要）可能需要登录
 app.use(express.static(path.join(__dirname, '..'))); // 静态文件服务指向项目根目录
 
-// 身份验证中间件
-const authMiddleware = (req, res, next) => {
-    // 排除登录页面和登录API
-    if (req.path === '/page/login.html' || req.path === '/api/login') {
-        return next();
-    }
 
-    // 检查用户是否已登录
-    if (!req.session.authenticated) {
-        // 如果是API请求，返回401错误
-        if (req.path.startsWith('/api/') || req.path.startsWith('/generate-') || req.path.startsWith('/save-config') || req.path.startsWith('/get-config')) {
-            return res.status(401).json({ error: 'Unauthorized', message: '请先登录' });
-        }
-        // 如果是页面请求，重定向到登录页
-        return res.redirect('/page/login.html');
-    }
+// --- 认证路由和中间件 ---
+// 挂载认证相关的路由 (例如 /login, /api/login, /api/logout 等)
+app.use(authRouter); // 使用从 auth.js 导入的路由
 
-    next();
-};
-
-// 应用身份验证中间件
+// 应用身份验证中间件 (保护后续的路由)
+// 这个中间件现在从 auth.js 导入
 app.use(authMiddleware);
+// --- 认证结束 ---
+
+
+// --- 受保护的 API 路由 ---
 
 // API 路由：保存配置
 app.post('/save-config', (req, res) => {
@@ -299,110 +302,38 @@ app.post('/generate-basic-token', (req, res) => {
     }
 });
 
-// 根路由，提供 index.html
+// 根路由，提供 index.html (现在受 authMiddleware 保护，如果未登录会重定向)
 app.get('/', (req, res) => {
+    // 检查配置是否存在，如果不存在，可能重定向到配置页面或显示提示
+    const config = readConfig();
+    if (!config) {
+        // 暂时先允许访问，前端应该有逻辑处理配置缺失
+        console.log('Root access allowed, but config is missing.');
+        // 或者可以重定向到某个设置页面
+        // return res.redirect('/page/config.html');
+    }
     res.sendFile(path.join(__dirname, '../index.html'));
 });
 
-// 登录页面路由
-app.get('/login', (req, res) => {
-    res.sendFile(path.join(__dirname, '../page/login.html'));
-});
+// 登录页面路由 - 已移至 auth.js
+// app.get('/login', (req, res) => {
+//     res.sendFile(path.join(__dirname, '../page/login.html'));
+// });
 
-// LDAP登录API
-app.post('/api/login', async (req, res) => {
-    const { username, password } = req.body;
+// LDAP登录API - 已移至 auth.js
+// app.post('/api/login', async (req, res) => { ... });
 
-    // 基本验证
-    if (!username || !password) {
-        return res.status(400).json({ success: false, message: '用户名和密码不能为空' });
-    }
+// 登出API - 已移至 auth.js
+// app.post('/api/logout', (req, res) => { ... });
 
-    try {
-        // 调用LDAP登录接口
-        const code = await opt_oms_login(username, password);
+// 清除所有cookie API - 已移至 auth.js
+// app.post('/api/clear-cookies', (req, res) => { ... });
 
-        if (code === 0) {
-            // 登录成功，设置会话
-            req.session.authenticated = true;
-            req.session.username = username;
-            return res.json({ success: true, message: '登录成功' });
-        } else {
-            // 登录失败
-            return res.status(401).json({ success: false, message: '用户名或密码错误' });
-        }
-    } catch (error) {
-        console.error('Login error:', error);
-        return res.status(500).json({ success: false, message: '登录服务暂时不可用，请稍后再试' });
-    }
-});
+// 检查登录状态 API - 已移至 auth.js
+// app.get('/api/check-login-status', (req, res) => { ... });
 
-// 登出API
-app.post('/api/logout', (req, res) => {
-    req.session.destroy(err => {
-        if (err) {
-            return res.status(500).json({ success: false, message: '登出失败' });
-        }
-        // 清除所有相关的cookie
-        res.clearCookie('connect.sid'); // 清除会话 cookie
-        res.json({ success: true, message: '已成功登出' });
-    });
-});
-
-// 清除所有cookie API
-app.post('/api/clear-cookies', (req, res) => {
-    req.session.destroy(err => {
-        if (err) {
-            console.error('Error destroying session:', err);
-        }
-        // 清除所有相关的cookie
-        res.clearCookie('connect.sid'); // 清除会话 cookie
-        res.json({ success: true, message: '已清除所有cookie' });
-    });
-});
-
-// 检查登录状态 API
-app.get('/api/check-login-status', (req, res) => {
-    // 检查用户是否已登录
-    if (req.session.authenticated) {
-        // 已登录
-        res.json({ success: true, message: '用户已登录', username: req.session.username });
-    } else {
-        // 未登录
-        res.status(401).json({ success: false, message: '用户未登录' });
-    }
-});
-
-// LDAP登录函数
-async function opt_oms_login(account, pwd) {
-    let code = 0;
-    let token = "";
-    const request_json = { "username": account, "password": pwd };
-
-    try {
-        const response = await axios.post(OPT_OMS_LOGIN_URL, request_json, { validateStatus: false });
-        const response_json = response.data;
-
-        if (response_json.code === 10000) {
-            token = response_json.data;
-            token_map[account] = token;
-            const msg = response_json.message;
-            console.log(`User ${account} logged in successfully: ${msg}`);
-        } else {
-            if (account in token_map) {
-                delete token_map[account];
-            }
-            code = response_json.code;
-            const msg = response_json.message;
-            console.log(`Login failed for user ${account}: ${msg}`);
-        }
-    } catch (error) {
-        console.error(`opt_oms_login failed: ${error}`);
-        code = -1;
-    }
-
-    return code;
-}
+// LDAP登录函数 - 已移至 auth.js
+// async function opt_oms_login(account, pwd) { ... }
 
 // API 路由：获取令牌历史记录
 app.get('/get-token-history', (req, res) => {
@@ -430,16 +361,19 @@ app.use((err, req, res, next) => {
 try {
     const server = app.listen(port, () => {
         console.log(`Server listening at http://localhost:${port}`);
-        console.log('Available endpoints:');
+        console.log('Available endpoints (some require login):');
+        console.log('- GET /login: Login page');
+        console.log('- POST /api/login: Login with LDAP credentials');
+        console.log('- POST /api/logout: Logout and clear session');
+        console.log('- GET /api/check-login-status: Check if user is logged in');
+        console.log('--- Protected Endpoints ---');
+        console.log('- GET /: Main application page');
         console.log('- POST /generate-token: Generate token with payload');
         console.log('- POST /generate-basic-token: Generate basic token with empty payload');
         console.log('- POST /save-config: Save configuration');
         console.log('- GET /get-config: Get configuration');
         console.log('- GET /get-token-history: Get token history');
-        console.log('- POST /api/login: Login with LDAP credentials');
-        console.log('- POST /api/logout: Logout and clear session');
-        console.log('- POST /api/clear-cookies: Clear all cookies and session');
-        console.log('- GET /api/check-login-status: Check if user is logged in');
+        // console.log('- POST /api/clear-cookies: Clear all cookies and session (for debugging)');
     });
 
     server.on('error', (error) => {
