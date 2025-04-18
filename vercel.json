@@ -5,5 +5,39 @@
             "src": "server/server.js",
             "use": "@vercel/node"
         }
+    ],
+    "routes": [
+        // Route specific API/server paths to the function
+        {
+            "src": "/api/(.*)",
+            "dest": "server/server.js"
+        },
+        {
+            "src": "/generate-token",
+            "dest": "server/server.js"
+        },
+        {
+            "src": "/generate-basic-token",
+            "dest": "server/server.js"
+        },
+        {
+            "src": "/save-config",
+            "dest": "server/server.js"
+        },
+        {
+            "src": "/get-config",
+            "dest": "server/server.js"
+        },
+        {
+            "src": "/get-token-history",
+            "dest": "server/server.js"
+        }
+        // Explicitly handle the root path, but let Vercel serve it (no "dest")
+        // This should trigger serving public/index.html
+        // { "src": "/", "continue": true }, // Option 1: Use continue (might not be needed)
+        // Requests not matching above (e.g., /login.html, /style/*, and potentially /)
+        // should be served from 'public' by default.
+        // If the above doesn't work for root, try adding an explicit root handler without dest:
+        // { "src": "/" } // Option 2: Just defining src might be enough
     ]
 }
