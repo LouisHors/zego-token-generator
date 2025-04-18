@@ -21,7 +21,7 @@ console.log('Session loaded');
 
 // --- Upstash Redis / Session Store Integration --- Start ---
 const { Redis } = require('@upstash/redis');
-const RedisStore = require("connect-redis").default; // Use .default for ES Modules compatibility if needed
+const RedisStore = require("connect-redis"); // Standard CommonJS import
 console.log('Upstash Redis and connect-redis loaded');
 
 // Initialize Upstash Redis client from environment variables
