@@ -5,31 +5,5 @@
             "src": "server/server.js",
             "use": "@vercel/node"
         }
-    ],
-    "routes": [
-        {
-            "src": "/api/(.*)",
-            "dest": "server/server.js"
-        },
-        {
-            "src": "/generate-token",
-            "dest": "server/server.js"
-        },
-        {
-            "src": "/generate-basic-token",
-            "dest": "server/server.js"
-        },
-        {
-            "src": "/save-config",
-            "dest": "server/server.js"
-        },
-        {
-            "src": "/get-config",
-            "dest": "server/server.js"
-        },
-        {
-            "src": "/get-token-history",
-            "dest": "server/server.js"
-        }
     ]
 }
